@@ -1,0 +1,124 @@
+// 📝 PROTOBUF DERSİ - .proto DOSYASI:
+//
+// Protocol Buffers (Protobuf) Google tarafından geliştirilen
+// binary serialization formatıdır.
+//
+// JSON'a göre avantajları:
+// ✅ Çok daha küçük boyut (binary format)
+// ✅ Çok daha hızlı serialize/deserialize
+// ✅ Şema zorunluluğu (type safety)
+// ✅ Backward/forward compatibility
+// ✅ Otomatik kod üretimi (C#, Java, Go, Python, ...)
+//
+// JSON'a göre dezavantajları:
+// ❌ Human-readable değil (binary)
+// ❌ Debug etmek zor
+// ❌ .proto dosyası paylaşılmalı
+
+// Syntax versiyonu — proto3 kullan (en güncel)
+syntax = "proto3";
+
+// C# namespace (üretilen kodun namespace'i)
+option csharp_namespace = "ProtobufDemo.Protos";
+
+// Paket adı (diğer .proto dosyalarından referans için)
+package warehouse;
+
+// ============================================================
+// MESSAGE (Veri Yapısı) — C#'taki class gibi
+// ============================================================
+
+// 📝 Her field'ın bir numarası var (1, 2, 3...)
+// Bu numara binary encoding'de kullanılır.
+// ⚠️ Numara DEĞİŞTİRİLMEMELİ (backward compatibility bozulur!)
+
+message Product {
+    int32 id = 1;                    // C#: public int Id { get; set; }
+    string name = 2;                 // C#: public string Name { get; set; }
+    string barcode = 3;
+    string category = 4;
+    int32 quantity = 5;
+    double price = 6;                // decimal yerine double (protobuf'ta decimal yok)
+    string location = 7;
+    int32 minimum_stock = 8;         // snake_case → C#'ta otomatik PascalCase olur
+    StockStatus status = 9;          // Enum referansı
+    int64 last_updated_ticks = 10;   // DateTime yerine ticks (protobuf'ta DateTime yok)
+}
+
+// 📝 ENUM — C#'taki enum'un protobuf karşılığı
+enum StockStatus {
+    STOCK_STATUS_UNSPECIFIED = 0;    // ⚠️ İlk değer 0 OLMALI (protobuf kuralı)
+    STOCK_STATUS_IN_STOCK = 1;
+    STOCK_STATUS_LOW_STOCK = 2;
+    STOCK_STATUS_OUT_OF_STOCK = 3;
+}
+
+// Liste (collection) mesajı
+message ProductList {
+    repeated Product products = 1;   // repeated = List<T>
+    int32 total_count = 2;
+}
+
+// ============================================================
+// NESTED MESSAGES & COMPLEX TYPES
+// ============================================================
+
+message StockUpdate {
+    int32 product_id = 1;
+    int32 quantity_change = 2;       // + veya - olabilir
+    string reason = 3;
+    int64 timestamp_ticks = 4;
+    UpdateType type = 5;
+
+    // Nested enum
+    enum UpdateType {
+        UPDATE_TYPE_UNSPECIFIED = 0;
+        UPDATE_TYPE_RECEIVED = 1;    // Mal kabul
+        UPDATE_TYPE_SHIPPED = 2;     // Sevkiyat
+        UPDATE_TYPE_ADJUSTED = 3;    // Manuel düzeltme
+        UPDATE_TYPE_RETURNED = 4;    // İade
+    }
+}
+
+// ============================================================
+// gRPC SERVİS TANIMLARI
+// ============================================================
+// gRPC = Protobuf + RPC (Remote Procedure Call)
+// REST API'nin binary ve daha hızlı versiyonu gibi düşün
+
+// 📝 service = Controller/API endpoint tanımı
+service WarehouseService {
+    // Unary RPC — tek istek, tek cevap (normal API call gibi)
+    rpc GetProduct(GetProductRequest) returns (Product);
+    rpc ListProducts(ListProductsRequest) returns (ProductList);
+    rpc CreateProduct(Product) returns (Product);
+    rpc UpdateStock(StockUpdate) returns (Product);
+    rpc DeleteProduct(DeleteProductRequest) returns (DeleteProductResponse);
+
+    // Server streaming — tek istek, çoklu cevap (real-time feed gibi)
+    rpc WatchStockUpdates(WatchRequest) returns (stream StockUpdate);
+}
+
+// Request/Response mesajları
+message GetProductRequest {
+    int32 id = 1;
+}
+
+message ListProductsRequest {
+    string category_filter = 1;
+    int32 page_size = 2;
+    int32 page_number = 3;
+}
+
+message DeleteProductRequest {
+    int32 id = 1;
+}
+
+message DeleteProductResponse {
+    bool success = 1;
+    string message = 2;
+}
+
+message WatchRequest {
+    string location_filter = 1;
+}

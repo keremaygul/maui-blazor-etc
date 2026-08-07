@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Google.Protobuf" Version="3.35.1" />
+    <PackageReference Include="Google.Protobuf.Tools" Version="3.35.1" />
+    <PackageReference Include="Grpc.Tools" Version="2.83.0">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="System.Text.Json" Version="10.0.10" />
+  </ItemGroup>
+
+  <!-- 📝 PROTOBUF DERSİ - PROTO DERLEME:
+       Grpc.Tools bu .proto dosyalarını otomatik C# class'larına dönüştürür.
+       GrpcServices="None" → sadece message class'ları üret (gRPC servisi yok) -->
+  <ItemGroup>
+    <Protobuf Include="Protos\warehouse.proto" GrpcServices="None" />
+  </ItemGroup>
+
+</Project>
