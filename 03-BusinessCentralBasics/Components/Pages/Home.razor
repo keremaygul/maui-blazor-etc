@@ -1,0 +1,127 @@
+@page "/"
+@rendermode InteractiveServer
+
+@*
+    📝 BUSINESS CENTRAL DERSİ - ROLE CENTER:
+    
+    BC'deki RoleCenter, kullanıcının ana dashboard'udur.
+    Her role için farklı bir RoleCenter tanımlanabilir:
+    - Business Manager → Finansal özet
+    - Sales Order Processor → Açık siparişler
+    - Warehouse Employee → Stok durumu
+    
+    Bu sayfa BC'deki RoleCenter'ın bir simülasyonudur.
+*@
+
+@inject MiniErp.Services.ErpService Erp
+
+<h1 class="page-title">📊 Mini ERP Dashboard</h1>
+<p class="subtitle">Business Central Simülasyonu — Sales Order → Shipment → Invoice Akışı</p>
+
+<div class="stats-grid">
+    <div class="stat-card blue">
+        <div class="stat-value">@stats.TotalCustomers</div>
+        <div class="stat-label">Customers</div>
+        <div class="stat-icon">👥</div>
+    </div>
+    <div class="stat-card green">
+        <div class="stat-value">@stats.TotalItems</div>
+        <div class="stat-label">Items</div>
+        <div class="stat-icon">📦</div>
+    </div>
+    <div class="stat-card purple">
+        <div class="stat-value">@stats.TotalOrders</div>
+        <div class="stat-label">Sales Orders</div>
+        <div class="stat-icon">📋</div>
+    </div>
+    <div class="stat-card orange">
+        <div class="stat-value">@stats.OpenOrders</div>
+        <div class="stat-label">Open Orders</div>
+        <div class="stat-icon">⏳</div>
+    </div>
+    <div class="stat-card teal">
+        <div class="stat-value">€@stats.TotalRevenue.ToString("N0")</div>
+        <div class="stat-label">Total Revenue</div>
+        <div class="stat-icon">💰</div>
+    </div>
+    <div class="stat-card red">
+        <div class="stat-value">@stats.LowStockItems</div>
+        <div class="stat-label">Low Stock Items</div>
+        <div class="stat-icon">⚠️</div>
+    </div>
+</div>
+
+<div class="dashboard-sections">
+    <div class="section">
+        <h2>📝 BC Document Flow (Belge Akışı)</h2>
+        <div class="flow-diagram">
+            <div class="flow-step">
+                <div class="flow-icon">📋</div>
+                <div class="flow-label">Sales Order</div>
+                <div class="flow-desc">Sipariş oluştur</div>
+            </div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-step">
+                <div class="flow-icon">✅</div>
+                <div class="flow-label">Release</div>
+                <div class="flow-desc">Onayla & kilitle</div>
+            </div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-step">
+                <div class="flow-icon">🚚</div>
+                <div class="flow-label">Post Shipment</div>
+                <div class="flow-desc">Sevk et (stok düşer)</div>
+            </div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-step">
+                <div class="flow-icon">🧾</div>
+                <div class="flow-label">Post Invoice</div>
+                <div class="flow-desc">Faturala (bakiye artar)</div>
+            </div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-step">
+                <div class="flow-icon">💳</div>
+                <div class="flow-label">Payment</div>
+                <div class="flow-desc">Ödeme al</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>📦 Item Inventory</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>No.</th>
+                    <th>Description</th>
+                    <th>Unit Price</th>
+                    <th>Inventory</th>
+                    <th>Value</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Erp.GetItems())
+                {
+                    <tr class="@(item.Inventory < 20 ? "low-stock" : "")">
+                        <td><code>@item.Number</code></td>
+                        <td>@item.Description</td>
+                        <td>€@item.UnitPrice.ToString("N2")</td>
+                        <td>
+                            <strong>@item.Inventory</strong> @item.UnitOfMeasure
+                        </td>
+                        <td>€@((item.Inventory * item.UnitPrice).ToString("N2"))</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@code {
+    private MiniErp.Services.DashboardStats stats = new();
+
+    protected override void OnInitialized()
+    {
+        stats = Erp.GetDashboardStats();
+    }
+}

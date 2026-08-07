@@ -1,0 +1,248 @@
+@page "/orders"
+@rendermode InteractiveServer
+
+@*
+    📝 BUSINESS CENTRAL DERSİ - SALES ORDER MANAGEMENT:
+    
+    Bu sayfa Business Central'daki "Sales Order List" ve "Sales Order Card"
+    sayfalarının temel mantığını simüle eder.
+    
+    Adımlar:
+    1. Yeni sipariş aç (Customer seç)
+    2. Satır ekle (Item & Quantity seç)
+    3. Release et (Siparişi kilitle)
+    4. Post Shipment (Stoktan düş)
+    5. Post Invoice (Fatura kes)
+*@
+
+@inject MiniErp.Services.ErpService Erp
+
+<h1 class="page-title">📋 Sales Orders</h1>
+<p class="subtitle">Business Central Sipariş ve Post İşlemleri Simülasyonu</p>
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger">⚠️ @errorMessage</div>
+}
+@if (!string.IsNullOrEmpty(successMessage))
+{
+    <div class="alert alert-success">✅ @successMessage</div>
+}
+
+<div class="actions-bar">
+    <div class="create-box">
+        <select @bind="selectedCustomerId">
+            <option value="0">-- Select Customer to Create Order --</option>
+            @foreach (var cust in Erp.GetCustomers())
+            {
+                <option value="@cust.Id">@cust.Number - @cust.Name (Credit Limit: €@cust.CreditLimit:N0)</option>
+            }
+        </select>
+        <button class="btn btn-primary" @onclick="CreateNewOrder">➕ Create Sales Order</button>
+    </div>
+</div>
+
+<div class="orders-container">
+    @if (!Erp.GetOrders().Any())
+    {
+        <div class="empty-state">No Sales Orders created yet. Select a customer above to create your first order!</div>
+    }
+    else
+    {
+        <div class="orders-list">
+            @foreach (var order in Erp.GetOrders())
+            {
+                <div class="order-card @(activeOrderId == order.Id ? "active" : "")">
+                    <div class="order-card-header" @onclick="() => SelectOrder(order.Id)">
+                        <div>
+                            <strong>@order.OrderNumber</strong> — <span class="cust-name">@order.CustomerName</span>
+                            <span class="order-date">(@order.OrderDate.ToShortDateString())</span>
+                        </div>
+                        <div class="order-card-right">
+                            <span class="badge badge-@order.Status.ToString().ToLower()">@order.Status</span>
+                            <strong class="total-amount">€@order.TotalAmount.ToString("N2")</strong>
+                        </div>
+                    </div>
+
+                    @if (activeOrderId == order.Id)
+                    {
+                        <div class="order-details">
+                            <div class="order-toolbar">
+                                @if (order.Status == MiniErp.Models.OrderStatus.Open)
+                                {
+                                    <button class="btn btn-warning" @onclick="() => ReleaseOrder(order.Id)">🔒 Release Order</button>
+                                }
+                                @if (order.Status == MiniErp.Models.OrderStatus.Released || order.Status == MiniErp.Models.OrderStatus.PartiallyShipped)
+                                {
+                                    <button class="btn btn-info" @onclick="() => PostShipment(order.Id)">🚚 Post Shipment</button>
+                                }
+                                @if (order.Status == MiniErp.Models.OrderStatus.Shipped || order.Status == MiniErp.Models.OrderStatus.PartiallyShipped)
+                                {
+                                    <button class="btn btn-success" @onclick="() => PostInvoice(order.Id)">🧾 Post Invoice</button>
+                                }
+                            </div>
+
+                            <h4>Order Lines (Document Lines)</h4>
+                            @if (order.Status == MiniErp.Models.OrderStatus.Open)
+                            {
+                                <div class="add-line-box">
+                                    <select @bind="selectedItemId">
+                                        <option value="0">-- Select Item --</option>
+                                        @foreach (var item in Erp.GetItems())
+                                        {
+                                            <option value="@item.Id">@item.Number - @item.Description (€@item.UnitPrice | Stock: @item.Inventory)</option>
+                                        }
+                                    </select>
+                                    <input type="number" @bind="lineQuantity" min="1" placeholder="Qty" />
+                                    <button class="btn btn-secondary" @onclick="() => AddLine(order.Id)">➕ Add Line</button>
+                                </div>
+                            }
+
+                            <table class="lines-table">
+                                <thead>
+                                    <tr>
+                                        <th>Line No.</th>
+                                        <th>Item No.</th>
+                                        <th>Description</th>
+                                        <th>Qty</th>
+                                        <th>Unit Price</th>
+                                        <th>Amount</th>
+                                        <th>Shipped</th>
+                                        <th>Invoiced</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @if (!order.Lines.Any())
+                                    {
+                                        <tr>
+                                            <td colspan="8" class="text-center">No lines added yet. Add an item above.</td>
+                                        </tr>
+                                    }
+                                    @foreach (var line in order.Lines)
+                                    {
+                                        <tr>
+                                            <td>@line.LineNo</td>
+                                            <td><code>@line.ItemNumber</code></td>
+                                            <td>@line.Description</td>
+                                            <td>@line.Quantity</td>
+                                            <td>€@line.UnitPrice.ToString("N2")</td>
+                                            <td>€@line.LineAmount.ToString("N2")</td>
+                                            <td>@line.QuantityShipped</td>
+                                            <td>@line.QuantityInvoiced</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private int selectedCustomerId = 0;
+    private int activeOrderId = 0;
+    private int selectedItemId = 0;
+    private int lineQuantity = 1;
+    private string errorMessage = "";
+    private string successMessage = "";
+
+    private void ClearMessages()
+    {
+        errorMessage = "";
+        successMessage = "";
+    }
+
+    private void CreateNewOrder()
+    {
+        ClearMessages();
+        if (selectedCustomerId <= 0)
+        {
+            errorMessage = "Please select a customer first.";
+            return;
+        }
+
+        try
+        {
+            var order = Erp.CreateOrder(selectedCustomerId);
+            activeOrderId = order.Id;
+            successMessage = $"Sales Order {order.OrderNumber} created successfully.";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+    }
+
+    private void SelectOrder(int id)
+    {
+        ClearMessages();
+        activeOrderId = activeOrderId == id ? 0 : id;
+    }
+
+    private void AddLine(int orderId)
+    {
+        ClearMessages();
+        if (selectedItemId <= 0 || lineQuantity <= 0)
+        {
+            errorMessage = "Select an item and enter a valid quantity.";
+            return;
+        }
+
+        try
+        {
+            Erp.AddOrderLine(orderId, selectedItemId, lineQuantity);
+            successMessage = "Line added successfully.";
+            lineQuantity = 1;
+            selectedItemId = 0;
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+    }
+
+    private void ReleaseOrder(int orderId)
+    {
+        ClearMessages();
+        try
+        {
+            Erp.ReleaseOrder(orderId);
+            successMessage = "Order released successfully. Document is now locked for editing.";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+    }
+
+    private void PostShipment(int orderId)
+    {
+        ClearMessages();
+        try
+        {
+            Erp.PostShipment(orderId);
+            successMessage = "Shipment posted! Inventory levels updated.";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+    }
+
+    private void PostInvoice(int orderId)
+    {
+        ClearMessages();
+        try
+        {
+            var inv = Erp.PostInvoice(orderId);
+            successMessage = $"Posted Sales Invoice {inv.InvoiceNumber} created! Customer balance updated.";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+    }
+}

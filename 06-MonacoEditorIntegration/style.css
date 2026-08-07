@@ -1,0 +1,244 @@
+/* ===== MONACO EDITOR PLAYGROUND - STYLES ===== */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    --bg-primary: #1e1e2e;
+    --bg-secondary: #181825;
+    --bg-surface: #313244;
+    --bg-hover: #45475a;
+    --text-primary: #cdd6f4;
+    --text-secondary: #a6adc8;
+    --text-muted: #6c7086;
+    --accent: #89b4fa;
+    --accent-hover: #74c7ec;
+    --border: #45475a;
+    --success: #a6e3a1;
+    --warning: #f9e2af;
+    --radius: 8px;
+    --font: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+body {
+    font-family: var(--font);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* ===== APP LAYOUT ===== */
+.app-container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+}
+
+/* ===== HEADER ===== */
+.app-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 20px;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.header-left h1 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--accent), #cba6f7);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.badge {
+    background: rgba(137, 180, 250, 0.15);
+    color: var(--accent);
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.header-right select, .btn {
+    background: var(--bg-surface);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-family: var(--font);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.header-right select:hover, .btn:hover {
+    background: var(--bg-hover);
+    border-color: var(--accent);
+}
+
+.btn:active {
+    transform: scale(0.97);
+}
+
+/* ===== MAIN CONTENT ===== */
+.main-content {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+/* ===== EDITOR PANEL ===== */
+.editor-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.panel-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border);
+    font-size: 0.85rem;
+}
+
+.file-icon {
+    font-size: 1rem;
+}
+
+.file-name {
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.editor-info {
+    margin-left: auto;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    font-family: 'Cascadia Code', 'Fira Code', monospace;
+}
+
+.editor-container {
+    flex: 1;
+}
+
+/* ===== INFO PANEL ===== */
+.info-panel {
+    width: 300px;
+    background: var(--bg-secondary);
+    border-left: 1px solid var(--border);
+    padding: 20px;
+    overflow-y: auto;
+    flex-shrink: 0;
+}
+
+.info-section {
+    margin-bottom: 24px;
+}
+
+.info-section h3 {
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-bottom: 12px;
+    color: var(--accent);
+}
+
+.info-section ul {
+    list-style: none;
+    padding: 0;
+}
+
+.info-section li {
+    padding: 4px 0;
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+
+.info-section p {
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    margin-bottom: 8px;
+}
+
+.info-section code {
+    background: var(--bg-surface);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.78rem;
+    color: var(--accent);
+}
+
+/* Shortcuts */
+.shortcuts {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 6px 12px;
+    align-items: center;
+}
+
+kbd {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.72rem;
+    font-family: 'Cascadia Code', 'Fira Code', monospace;
+    color: var(--text-primary);
+    white-space: nowrap;
+}
+
+.shortcuts span {
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+}
+
+/* ===== STATUS BAR ===== */
+.status-bar {
+    display: flex;
+    justify-content: flex-end;
+    gap: 20px;
+    padding: 4px 16px;
+    background: var(--accent);
+    color: var(--bg-primary);
+    font-size: 0.75rem;
+    font-weight: 500;
+    flex-shrink: 0;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 900px) {
+    .info-panel {
+        display: none;
+    }
+    
+    .header-right {
+        flex-wrap: wrap;
+    }
+}

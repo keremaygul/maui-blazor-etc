@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monaco Editor - AL Language Playground</title>
+    
+    <!--
+        📝 MONACO EDITOR DERSİ:
+        
+        Monaco Editor, VS Code'un temelini oluşturan web tabanlı kod editörüdür.
+        Microsoft tarafından geliştirilmiştir ve açık kaynaklıdır.
+        
+        Kullanım alanları:
+        - Online kod editörleri (CodePen, StackBlitz gibi)
+        - Konfigürasyon editörleri (JSON/YAML düzenleme)
+        - Custom DSL editörleri (AL gibi)
+        - Code review araçları
+        - İş yerindeki senaryolarda: FiftyPortal benzeri web portallarında
+          AL kodu veya konfigürasyon düzenleme
+    -->
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-left">
+                <h1>⚡ Monaco Editor Playground</h1>
+                <span class="badge">AL Language</span>
+            </div>
+            <div class="header-right">
+                <select id="themeSelector" title="Theme">
+                    <option value="vs-dark">🌙 Dark</option>
+                    <option value="vs">☀️ Light</option>
+                    <option value="hc-black">🔲 High Contrast</option>
+                </select>
+                <select id="languageSelector" title="Language">
+                    <option value="al">AL</option>
+                    <option value="csharp">C#</option>
+                    <option value="json">JSON</option>
+                    <option value="javascript">JavaScript</option>
+                    <option value="html">HTML</option>
+                </select>
+                <select id="sampleSelector" title="Sample Code">
+                    <option value="al-table">AL: Table</option>
+                    <option value="al-page">AL: Page</option>
+                    <option value="al-codeunit">AL: Codeunit</option>
+                    <option value="csharp-blazor">C#: Blazor Service</option>
+                    <option value="json-appjson">JSON: app.json</option>
+                </select>
+                <button id="formatBtn" class="btn" title="Format Code">🔧 Format</button>
+                <button id="minimapToggle" class="btn" title="Toggle Minimap">🗺️ Minimap</button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Editor Panel -->
+            <div class="editor-panel">
+                <div class="panel-header">
+                    <span class="file-icon">📄</span>
+                    <span id="fileName" class="file-name">ItemTracking.Table.al</span>
+                    <span class="editor-info">
+                        Ln <span id="cursorLine">1</span>, Col <span id="cursorCol">1</span>
+                    </span>
+                </div>
+                <div id="monacoEditor" class="editor-container"></div>
+            </div>
+
+            <!-- Info Panel -->
+            <div class="info-panel">
+                <div class="info-section">
+                    <h3>📝 Monaco Editor Hakkında</h3>
+                    <ul>
+                        <li><strong>VS Code'un editörü</strong> — aynı engine</li>
+                        <li><strong>IntelliSense</strong> — otomatik tamamlama</li>
+                        <li><strong>Syntax Highlighting</strong> — dile özel renklendirme</li>
+                        <li><strong>Multiple Cursors</strong> — Alt+Click</li>
+                        <li><strong>Find & Replace</strong> — Ctrl+H</li>
+                        <li><strong>Minimap</strong> — sağdaki küçük önizleme</li>
+                        <li><strong>Folding</strong> — kod blokları katlama</li>
+                    </ul>
+                </div>
+                <div class="info-section">
+                    <h3>⌨️ Kısayollar</h3>
+                    <div class="shortcuts">
+                        <kbd>Ctrl+Space</kbd> <span>IntelliSense</span>
+                        <kbd>Ctrl+D</kbd> <span>Kelime seç</span>
+                        <kbd>Alt+↑/↓</kbd> <span>Satır taşı</span>
+                        <kbd>Ctrl+Shift+K</kbd> <span>Satır sil</span>
+                        <kbd>Ctrl+/</kbd> <span>Yorum ekle</span>
+                        <kbd>Ctrl+H</kbd> <span>Bul & Değiştir</span>
+                        <kbd>Alt+Click</kbd> <span>Çoklu imleç</span>
+                        <kbd>Ctrl+F2</kbd> <span>Tümünü seç</span>
+                    </div>
+                </div>
+                <div class="info-section">
+                    <h3>🎨 Custom Language</h3>
+                    <p>Bu demo'da AL dili için özel syntax highlighting tanımladık. 
+                    Monaco Editor'ün <code>monarch</code> tokenizer'ı ile herhangi bir 
+                    dil için syntax rules yazabilirsin.</p>
+                    <p><code>app.js</code> dosyasındaki <code>registerALLanguage()</code> 
+                    fonksiyonuna bak.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Status Bar -->
+        <footer class="status-bar">
+            <span>Monaco Editor v0.52.x</span>
+            <span id="languageDisplay">AL</span>
+            <span>UTF-8</span>
+            <span>Spaces: 4</span>
+        </footer>
+    </div>
+
+    <!--
+        📝 MONACO EDITOR DERSİ - YÜKLEME:
+        
+        Monaco Editor'ü yüklemek için AMD (RequireJS) loader kullanılır.
+        Bu, VS Code'un modül sistemidir.
+        
+        CDN üzerinden yüklüyoruz — production'da npm paketi kullanılır.
+        npm install monaco-editor
+    -->
+    <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs/loader.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
