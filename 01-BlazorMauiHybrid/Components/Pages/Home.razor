@@ -1,0 +1,157 @@
+@page "/"
+
+@* 
+    📝 BLAZOR DERSİ - PAGE DIRECTIVE & DEPENDENCY INJECTION:
+    
+    @page "/"          → Bu component'in URL rotasını belirler (Ana sayfa)
+    @inject             → DI container'dan servis alır (constructor injection yerine)
+    
+    Blazor'da her .razor dosyası bir "component"tir.
+    @page directive'i olan component'ler aynı zamanda "page" (sayfa) olur ve URL ile erişilebilir.
+*@
+
+@inject StockTracker.Services.StockService StockService
+
+<h1 class="page-title">📦 Stock Dashboard</h1>
+
+@* 
+    📝 BLAZOR DERSİ - LIFECYCLE:
+    OnInitialized() → Component ilk oluşturulduğunda çalışır (ngOnInit gibi)
+    OnParametersSet() → Parametreler her değiştiğinde
+    OnAfterRender() → Render tamamlandıktan sonra (DOM erişimi için)
+*@
+
+<div class="dashboard-grid">
+    <!-- Toplam Ürün -->
+    <div class="stat-card">
+        <div class="stat-icon">📋</div>
+        <div class="stat-info">
+            <span class="stat-value">@summary.TotalProducts</span>
+            <span class="stat-label">Total Products</span>
+        </div>
+    </div>
+
+    <!-- Toplam Stok -->
+    <div class="stat-card">
+        <div class="stat-icon">📊</div>
+        <div class="stat-info">
+            <span class="stat-value">@summary.TotalItems</span>
+            <span class="stat-label">Total Items in Stock</span>
+        </div>
+    </div>
+
+    <!-- Toplam Değer -->
+    <div class="stat-card">
+        <div class="stat-icon">💰</div>
+        <div class="stat-info">
+            <span class="stat-value">€@summary.TotalValue.ToString("N2")</span>
+            <span class="stat-label">Total Value</span>
+        </div>
+    </div>
+
+    <!-- Düşük Stok -->
+    <div class="stat-card warning">
+        <div class="stat-icon">⚠️</div>
+        <div class="stat-info">
+            <span class="stat-value">@summary.LowStockCount</span>
+            <span class="stat-label">Low Stock Items</span>
+        </div>
+    </div>
+
+    <!-- Stok Tükendi -->
+    <div class="stat-card danger">
+        <div class="stat-icon">🚫</div>
+        <div class="stat-info">
+            <span class="stat-value">@summary.OutOfStockCount</span>
+            <span class="stat-label">Out of Stock</span>
+        </div>
+    </div>
+</div>
+
+<h2 class="section-title">⚠️ Items Needing Attention</h2>
+
+@* 
+    📝 BLAZOR DERSİ - CONDITIONAL RENDERING & LOOPS:
+    @if / @foreach → C# kontrol yapıları doğrudan HTML içinde kullanılır
+    Bu, Razor syntax'ın en güçlü yanı — template engine değil, gerçek C#!
+*@
+
+@if (alertProducts.Any())
+{
+    <div class="alert-table">
+        <table>
+            <thead>
+                <tr>
+                    <th>Product</th>
+                    <th>Location</th>
+                    <th>Stock</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var product in alertProducts)
+                {
+                    <tr>
+                        <td>
+                            <strong>@product.Name</strong>
+                            <br/>
+                            <small class="text-muted">@product.Barcode</small>
+                        </td>
+                        <td>@product.Location</td>
+                        <td>@product.Quantity / @product.MinimumStock</td>
+                        <td>
+                            <span class="badge @GetStatusClass(product.Status)">
+                                @product.Status
+                            </span>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+else
+{
+    <p class="text-success">✅ All stock levels are healthy!</p>
+}
+
+@code {
+    /*
+        📝 BLAZOR DERSİ - @code BLOĞU:
+        
+        Bu blok, component'in C# kodunu içerir.
+        - Field'lar → Component'in state'i (React'teki useState gibi)
+        - Metodlar → Event handler'lar ve helper fonksiyonlar
+        - Lifecycle metodları → OnInitialized, OnParametersSet, vb.
+        
+        State değiştiğinde Blazor otomatik olarak UI'ı günceller (re-render).
+        Manuel olarak StateHasChanged() çağırabilirsin ama genelde gerekmez.
+    */
+
+    private StockTracker.Services.StockSummary summary = new();
+    private List<StockTracker.Models.Product> alertProducts = new();
+
+    // Component ilk yüklendiğinde çalışır
+    protected override void OnInitialized()
+    {
+        LoadData();
+    }
+
+    private void LoadData()
+    {
+        summary = StockService.GetSummary();
+        alertProducts = StockService.GetAll()
+            .Where(p => p.Status != StockTracker.Models.StockStatus.InStock)
+            .OrderBy(p => p.Quantity)
+            .ToList();
+    }
+
+    // Helper: Stok durumuna göre CSS class döndürür
+    private string GetStatusClass(StockTracker.Models.StockStatus status) => status switch
+    {
+        StockTracker.Models.StockStatus.InStock => "badge-success",
+        StockTracker.Models.StockStatus.LowStock => "badge-warning",
+        StockTracker.Models.StockStatus.OutOfStock => "badge-danger",
+        _ => ""
+    };
+}

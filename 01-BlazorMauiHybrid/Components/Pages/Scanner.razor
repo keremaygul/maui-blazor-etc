@@ -1,0 +1,211 @@
+@page "/scanner"
+
+@*
+    📝 BLAZOR DERSİ - BARKOD TARAYICI SİMÜLASYONU:
+    
+    Gerçek hayatta (FiftyScan gibi ürünlerde) barkod tarayıcı:
+    1. Kamera API'si veya harici USB/Bluetooth tarayıcı kullanır
+    2. Tarayıcı veriyi input alanına "keyboard wedge" olarak gönderir
+    3. JavaScript interop ile kamera erişimi sağlanabilir
+    
+    Bu simülasyonda: Manuel giriş + rastgele barkod üretimi
+    
+    📝 BLAZOR DERSİ - JS INTEROP (İleri Seviye):
+    Gerçek kamera erişimi için @inject IJSRuntime JS kullanarak
+    JavaScript tarafındaki kamera API'sini çağırabilirsin:
+    
+    await JS.InvokeVoidAsync("startBarcodeScanner", elementRef);
+*@
+
+@inject StockTracker.Services.StockService StockService
+
+<h1 class="page-title">📷 Barcode Scanner</h1>
+
+<div class="scanner-container">
+    <!-- Tarayıcı Simülasyonu -->
+    <div class="scanner-box">
+        <div class="scanner-frame">
+            <div class="scan-line @(isScanning ? "scanning" : "")"></div>
+            <div class="scanner-text">
+                @if (isScanning)
+                {
+                    <span>Scanning...</span>
+                }
+                else
+                {
+                    <span>Ready to scan</span>
+                }
+            </div>
+        </div>
+
+        <div class="scanner-input">
+            <input type="text" 
+                   @bind="barcodeInput" 
+                   placeholder="Enter barcode or click Scan..." 
+                   @onkeydown="OnBarcodeKeyDown" />
+            <button @onclick="SimulateScan" class="btn btn-primary">
+                📷 Simulate Scan
+            </button>
+        </div>
+    </div>
+
+    <!-- Sonuç -->
+    @if (scanResult != null)
+    {
+        <div class="scan-result success">
+            <h3>✅ Product Found!</h3>
+            <div class="result-details">
+                <div class="detail-row">
+                    <span class="label">Name:</span>
+                    <span class="value">@scanResult.Name</span>
+                </div>
+                <div class="detail-row">
+                    <span class="label">Barcode:</span>
+                    <span class="value"><code>@scanResult.Barcode</code></span>
+                </div>
+                <div class="detail-row">
+                    <span class="label">Category:</span>
+                    <span class="value">@scanResult.Category</span>
+                </div>
+                <div class="detail-row">
+                    <span class="label">Location:</span>
+                    <span class="value"><code>@scanResult.Location</code></span>
+                </div>
+                <div class="detail-row">
+                    <span class="label">Stock:</span>
+                    <span class="value @(scanResult.Quantity <= scanResult.MinimumStock ? "text-warning" : "")">
+                        @scanResult.Quantity units
+                    </span>
+                </div>
+                <div class="detail-row">
+                    <span class="label">Price:</span>
+                    <span class="value">€@scanResult.Price.ToString("N2")</span>
+                </div>
+            </div>
+
+            <div class="quick-actions">
+                <h4>Quick Stock Update</h4>
+                <div class="stock-adjuster">
+                    <button @onclick="() => AdjustStock(-1)" class="btn btn-danger">➖</button>
+                    <span class="stock-display">@scanResult.Quantity</span>
+                    <button @onclick="() => AdjustStock(1)" class="btn btn-success">➕</button>
+                </div>
+                <a href="/products/edit/@scanResult.Id" class="btn btn-secondary">✏️ Full Edit</a>
+            </div>
+        </div>
+    }
+    else if (showNotFound)
+    {
+        <div class="scan-result error">
+            <h3>❌ Product Not Found</h3>
+            <p>No product with barcode <code>@lastScannedBarcode</code> was found.</p>
+            <a href="/products/add" class="btn btn-primary">➕ Add New Product</a>
+        </div>
+    }
+
+    <!-- Tarama Geçmişi -->
+    @if (scanHistory.Any())
+    {
+        <div class="scan-history">
+            <h3>📜 Scan History</h3>
+            <ul>
+                @foreach (var entry in scanHistory)
+                {
+                    <li>
+                        <span class="time">@entry.Time.ToString("HH:mm:ss")</span>
+                        <code>@entry.Barcode</code>
+                        <span class="@(entry.Found ? "text-success" : "text-danger")">
+                            @(entry.Found ? entry.ProductName : "Not Found")
+                        </span>
+                    </li>
+                }
+            </ul>
+        </div>
+    }
+</div>
+
+@code {
+    private string barcodeInput = "";
+    private bool isScanning = false;
+    private bool showNotFound = false;
+    private string lastScannedBarcode = "";
+    private StockTracker.Models.Product? scanResult = null;
+    private List<ScanHistoryEntry> scanHistory = new();
+
+    /*
+        📝 BLAZOR DERSİ - KEYBOARD EVENTS:
+        @onkeydown → Tuşa basıldığında (KeyboardEventArgs alır)
+        
+        Gerçek barkod tarayıcılar "keyboard wedge" modunda çalışır:
+        Tarayıcı barkodu okur → karakterleri hızlıca input'a yazar → Enter basar.
+        Bu yüzden Enter'a basıldığında tarama yapıyoruz.
+    */
+    private void OnBarcodeKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !string.IsNullOrWhiteSpace(barcodeInput))
+        {
+            PerformScan(barcodeInput);
+        }
+    }
+
+    // Rastgele mevcut bir ürünün barkodunu "tara"
+    private async Task SimulateScan()
+    {
+        isScanning = true;
+        StateHasChanged(); // 📝 Manuel re-render — async işlemlerde bazen gerekli
+
+        // Tarama animasyonu için kısa bekleme
+        await Task.Delay(800);
+
+        var products = StockService.GetAll();
+        if (products.Any())
+        {
+            var random = new Random();
+            var randomProduct = products[random.Next(products.Count)];
+            barcodeInput = randomProduct.Barcode;
+            PerformScan(randomProduct.Barcode);
+        }
+
+        isScanning = false;
+    }
+
+    private void PerformScan(string barcode)
+    {
+        lastScannedBarcode = barcode;
+        scanResult = StockService.GetByBarcode(barcode);
+        showNotFound = scanResult == null;
+
+        // Geçmişe ekle
+        scanHistory.Insert(0, new ScanHistoryEntry
+        {
+            Time = DateTime.Now,
+            Barcode = barcode,
+            Found = scanResult != null,
+            ProductName = scanResult?.Name ?? ""
+        });
+
+        // Son 10 taramayı tut
+        if (scanHistory.Count > 10)
+            scanHistory.RemoveAt(scanHistory.Count - 1);
+
+        barcodeInput = "";
+    }
+
+    private void AdjustStock(int amount)
+    {
+        if (scanResult == null) return;
+        
+        scanResult.Quantity = Math.Max(0, scanResult.Quantity + amount);
+        StockService.Update(scanResult);
+        // 📝 UI otomatik güncellenir çünkü scanResult'un referansı hala aynı
+    }
+
+    // Tarama geçmişi için basit record
+    private class ScanHistoryEntry
+    {
+        public DateTime Time { get; set; }
+        public string Barcode { get; set; } = "";
+        public bool Found { get; set; }
+        public string ProductName { get; set; } = "";
+    }
+}

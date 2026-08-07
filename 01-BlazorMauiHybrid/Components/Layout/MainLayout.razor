@@ -1,0 +1,26 @@
+@inherits LayoutComponentBase
+
+@*
+    📝 BLAZOR DERSİ - LAYOUT:
+    
+    @inherits LayoutComponentBase → Bu component bir layout'tur
+    @Body → Child page'in render edileceği yer (ASP.NET MVC'deki @RenderBody() gibi)
+    
+    Layout'lar Routes.razor'da belirtilir:
+    <RouteView DefaultLayout="typeof(MainLayout)" />
+    
+    Veya her page'de ayrı ayrı:
+    @layout MainLayout
+*@
+
+<div class="page">
+    <div class="sidebar">
+        <NavMenu />
+    </div>
+
+    <main>
+        <article class="content px-4">
+            @Body
+        </article>
+    </main>
+</div>

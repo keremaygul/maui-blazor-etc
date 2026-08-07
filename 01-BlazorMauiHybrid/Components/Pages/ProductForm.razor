@@ -1,0 +1,189 @@
+@page "/products/add"
+@page "/products/edit/{Id:int}"
+
+@*
+    📝 BLAZOR DERSİ - ROUTE PARAMETERS:
+    
+    @page "/products/edit/{Id:int}"
+    → {Id:int} bir route parameter'dır. URL'den otomatik parse edilir.
+    → :int constraint sayesinde sadece sayısal değerler kabul edilir.
+    → Birden fazla @page directive'i olabilir (hem add hem edit aynı component!)
+    
+    Diğer constraint örnekleri:
+    {Id:guid}    → GUID
+    {Name:alpha} → Sadece harf
+    {Age:int:range(18,99)} → 18-99 arası sayı
+*@
+
+@inject StockTracker.Services.StockService StockService
+@inject NavigationManager Navigation
+
+@*
+    📝 BLAZOR DERSİ - NavigationManager:
+    Blazor'un built-in navigation servisi. URL yönlendirme için kullanılır.
+    Navigation.NavigateTo("/products") → Programmatic navigation
+    <NavLink> → Declarative navigation (HTML'de <a> yerine)
+*@
+
+<h1 class="page-title">@(isEdit ? "✏️ Edit Product" : "➕ Add New Product")</h1>
+
+<div class="form-container">
+    @*
+        📝 BLAZOR DERSİ - FORM & VALIDATION:
+        
+        <EditForm> → Blazor'un form component'i (HTML <form> yerine)
+        Model="product" → Form'un bağlı olduğu veri modeli
+        OnValidSubmit → Validasyon başarılıysa çalışır
+        
+        <DataAnnotationsValidator /> → Model üzerindeki [Required], [Range] vb. attribute'ları kullanır
+        <ValidationSummary /> → Tüm hataları toplu gösterir
+        <ValidationMessage For="..." /> → Tek bir field'ın hatasını gösterir
+        
+        Biz basit tutuyoruz, DataAnnotations kullanmadan manuel kontrol yapıyoruz.
+    *@
+
+    <div class="form-group">
+        <label for="name">Product Name</label>
+        <input id="name" type="text" @bind="product.Name" placeholder="e.g. Wireless Mouse" />
+    </div>
+
+    <div class="form-group">
+        <label for="barcode">Barcode (EAN-13)</label>
+        <div class="barcode-input">
+            <input id="barcode" type="text" @bind="product.Barcode" placeholder="e.g. 4012345678901" />
+            <button type="button" @onclick="GenerateBarcode" class="btn btn-secondary" title="Generate random barcode">
+                🔄 Generate
+            </button>
+        </div>
+    </div>
+
+    <div class="form-row">
+        <div class="form-group">
+            <label for="category">Category</label>
+            <input id="category" type="text" @bind="product.Category" placeholder="e.g. Electronics" list="categories" />
+            <datalist id="categories">
+                @foreach (var cat in existingCategories)
+                {
+                    <option value="@cat" />
+                }
+            </datalist>
+        </div>
+
+        <div class="form-group">
+            <label for="location">Location</label>
+            <input id="location" type="text" @bind="product.Location" placeholder="e.g. A-01-03" />
+        </div>
+    </div>
+
+    <div class="form-row">
+        <div class="form-group">
+            <label for="quantity">Quantity</label>
+            <input id="quantity" type="number" @bind="product.Quantity" min="0" />
+        </div>
+
+        <div class="form-group">
+            <label for="price">Price (€)</label>
+            <input id="price" type="number" @bind="product.Price" min="0" step="0.01" />
+        </div>
+
+        <div class="form-group">
+            <label for="minstock">Minimum Stock</label>
+            <input id="minstock" type="number" @bind="product.MinimumStock" min="0" />
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger">@errorMessage</div>
+    }
+
+    <div class="form-actions">
+        <button @onclick="Save" class="btn btn-primary">
+            💾 @(isEdit ? "Update" : "Save")
+        </button>
+        <a href="/products" class="btn btn-secondary">Cancel</a>
+    </div>
+</div>
+
+@code {
+    /*
+        📝 BLAZOR DERSİ - [Parameter]:
+        
+        [Parameter] attribute'u, component'e dışarıdan veri geçirmek için kullanılır.
+        Route parameter'ları da [Parameter] ile alınır.
+        
+        ⚠️ ÖNEMLİ: [Parameter] property'leri PUBLIC olmalı!
+        Private yaparsan Blazor hata verir.
+    */
+
+    [Parameter]
+    public int Id { get; set; }
+
+    private StockTracker.Models.Product product = new();
+    private bool isEdit => Id > 0;
+    private string errorMessage = "";
+    private List<string> existingCategories = new();
+
+    protected override void OnInitialized()
+    {
+        existingCategories = StockService.GetCategories();
+
+        if (isEdit)
+        {
+            var existing = StockService.GetById(Id);
+            if (existing != null)
+            {
+                // Kopyasını oluştur (referans sorunlarını önlemek için)
+                product = new StockTracker.Models.Product
+                {
+                    Id = existing.Id,
+                    Name = existing.Name,
+                    Barcode = existing.Barcode,
+                    Category = existing.Category,
+                    Quantity = existing.Quantity,
+                    Price = existing.Price,
+                    Location = existing.Location,
+                    MinimumStock = existing.MinimumStock
+                };
+            }
+            else
+            {
+                errorMessage = "Product not found!";
+            }
+        }
+    }
+
+    private void Save()
+    {
+        // Basit validasyon
+        if (string.IsNullOrWhiteSpace(product.Name))
+        {
+            errorMessage = "Product name is required!";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(product.Barcode))
+        {
+            errorMessage = "Barcode is required!";
+            return;
+        }
+
+        if (isEdit)
+        {
+            StockService.Update(product);
+        }
+        else
+        {
+            StockService.Add(product);
+        }
+
+        // Kayıt sonrası listeye geri dön
+        Navigation.NavigateTo("/products");
+    }
+
+    private void GenerateBarcode()
+    {
+        product.Barcode = StockService.GenerateBarcode();
+        // 📝 StateHasChanged() otomatik çağrılır — UI güncellenir
+    }
+}

@@ -1,0 +1,214 @@
+@page "/products"
+
+@*
+    📝 BLAZOR DERSİ - COMPONENT ARASI İLETİŞİM:
+    
+    Blazor'da component'ler arası veri aktarımı:
+    1. [Parameter] → Parent'tan child'a veri gönderme
+    2. [CascadingParameter] → Üst component'ten tüm alt ağaca veri yayma
+    3. EventCallback → Child'dan parent'a event gönderme
+    4. Service (DI) → Component'ler arası paylaşılan state (biz bunu kullanıyoruz)
+*@
+
+@inject StockTracker.Services.StockService StockService
+
+<h1 class="page-title">📋 Product List</h1>
+
+<!-- Arama ve Filtreleme -->
+<div class="toolbar">
+    <div class="search-box">
+        <input type="text" 
+               placeholder="Search by name, barcode or location..." 
+               @bind="searchQuery" 
+               @bind:event="oninput"
+               @onkeyup="OnSearch" />
+        @* 
+            📝 BLAZOR DERSİ - DATA BINDING:
+            @bind → Two-way binding (hem okur hem yazar)
+            @bind:event="oninput" → Her tuşa basıldığında güncelle (varsayılan: onchange = focus kaybında)
+            @onkeyup → Tuşa basıldığında event tetikle
+        *@
+    </div>
+
+    <select @bind="selectedCategory" @bind:after="OnFilter">
+        <option value="">All Categories</option>
+        @foreach (var category in categories)
+        {
+            <option value="@category">@category</option>
+        }
+    </select>
+    @* 
+        📝 BLAZOR DERSİ - @bind:after (C# 7+):
+        @bind:after → Binding tamamlandıktan SONRA çalışacak metod.
+        Eski yöntem: @onchange ile manuel binding yapılırdı.
+        Yeni yöntem (NET 7+): @bind:after ile çok daha temiz!
+    *@
+
+    <a href="/products/add" class="btn btn-primary">
+        ➕ Add Product
+    </a>
+</div>
+
+<!-- Ürün Tablosu -->
+<div class="product-table">
+    <table>
+        <thead>
+            <tr>
+                <th @onclick='() => SortBy("Name")' class="sortable">
+                    Product @GetSortIndicator("Name")
+                </th>
+                <th>Barcode</th>
+                <th>Category</th>
+                <th @onclick='() => SortBy("Quantity")' class="sortable">
+                    Stock @GetSortIndicator("Quantity")
+                </th>
+                <th @onclick='() => SortBy("Price")' class="sortable">
+                    Price @GetSortIndicator("Price")
+                </th>
+                <th>Location</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (!filteredProducts.Any())
+            {
+                <tr>
+                    <td colspan="8" class="text-center">No products found.</td>
+                </tr>
+            }
+            else
+            {
+                @foreach (var product in filteredProducts)
+                {
+                    <tr class="@GetRowClass(product.Status)">
+                        <td>
+                            <strong>@product.Name</strong>
+                        </td>
+                        <td><code>@product.Barcode</code></td>
+                        <td>@product.Category</td>
+                        <td>
+                            <span class="stock-count">@product.Quantity</span>
+                            <small class="text-muted">/ min: @product.MinimumStock</small>
+                        </td>
+                        <td>€@product.Price.ToString("N2")</td>
+                        <td><code>@product.Location</code></td>
+                        <td>
+                            <span class="badge @GetStatusClass(product.Status)">
+                                @product.Status
+                            </span>
+                        </td>
+                        <td class="actions">
+                            <a href="/products/edit/@product.Id" class="btn-sm btn-edit" title="Edit">✏️</a>
+                            <button @onclick="() => DeleteProduct(product.Id)" class="btn-sm btn-delete" title="Delete">🗑️</button>
+                            @*
+                                📝 BLAZOR DERSİ - LAMBDA EVENT HANDLER:
+                                @onclick="() => DeleteProduct(product.Id)"
+                                
+                                Lambda kullanmak ZORUNLU çünkü parametre geçirmemiz gerekiyor.
+                                Direkt @onclick="DeleteProduct(product.Id)" yazarsan HATA alırsın!
+                                (Çünkü bu compile-time'da çağrılır, click handler olmaz)
+                            *@
+                        </td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+</div>
+
+@code {
+    private List<StockTracker.Models.Product> allProducts = new();
+    private List<StockTracker.Models.Product> filteredProducts = new();
+    private List<string> categories = new();
+    private string searchQuery = "";
+    private string selectedCategory = "";
+    private string sortColumn = "Name";
+    private bool sortAscending = true;
+
+    protected override void OnInitialized()
+    {
+        categories = StockService.GetCategories();
+        LoadProducts();
+    }
+
+    private void LoadProducts()
+    {
+        allProducts = StockService.GetAll();
+        ApplyFilters();
+    }
+
+    private void OnSearch()
+    {
+        ApplyFilters();
+    }
+
+    private void OnFilter()
+    {
+        ApplyFilters();
+    }
+
+    private void ApplyFilters()
+    {
+        var results = StockService.Search(searchQuery);
+
+        if (!string.IsNullOrEmpty(selectedCategory))
+            results = results.Where(p => p.Category == selectedCategory).ToList();
+
+        // Sıralama uygula
+        filteredProducts = sortColumn switch
+        {
+            "Name" => sortAscending 
+                ? results.OrderBy(p => p.Name).ToList() 
+                : results.OrderByDescending(p => p.Name).ToList(),
+            "Quantity" => sortAscending 
+                ? results.OrderBy(p => p.Quantity).ToList() 
+                : results.OrderByDescending(p => p.Quantity).ToList(),
+            "Price" => sortAscending 
+                ? results.OrderBy(p => p.Price).ToList() 
+                : results.OrderByDescending(p => p.Price).ToList(),
+            _ => results
+        };
+    }
+
+    private void SortBy(string column)
+    {
+        if (sortColumn == column)
+            sortAscending = !sortAscending;
+        else
+        {
+            sortColumn = column;
+            sortAscending = true;
+        }
+        ApplyFilters();
+    }
+
+    private string GetSortIndicator(string column)
+    {
+        if (sortColumn != column) return "";
+        return sortAscending ? "▲" : "▼";
+    }
+
+    private void DeleteProduct(int id)
+    {
+        StockService.Delete(id);
+        LoadProducts();
+        // 📝 StateHasChanged() burada otomatik çağrılır çünkü
+        // bu bir event handler. Manuel çağırmaya gerek yok!
+    }
+
+    private string GetStatusClass(StockTracker.Models.StockStatus status) => status switch
+    {
+        StockTracker.Models.StockStatus.InStock => "badge-success",
+        StockTracker.Models.StockStatus.LowStock => "badge-warning",
+        StockTracker.Models.StockStatus.OutOfStock => "badge-danger",
+        _ => ""
+    };
+
+    private string GetRowClass(StockTracker.Models.StockStatus status) => status switch
+    {
+        StockTracker.Models.StockStatus.OutOfStock => "row-danger",
+        StockTracker.Models.StockStatus.LowStock => "row-warning",
+        _ => ""
+    };
+}
